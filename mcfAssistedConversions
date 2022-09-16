@@ -1,3 +1,6 @@
+-- Consulta en BQ tratando de replicar el informe de conversiones asistidas de GA.
+
+
 WITH
   Traffic AS (
   SELECT
