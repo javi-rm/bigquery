@@ -1,0 +1,63 @@
+WITH
+  Traffic AS (
+  SELECT
+    trafficSource.source AS Sources,
+    trafficSource.medium AS Medium,
+    channelGrouping AS Channel,
+    date,
+    trafficSource.campaign AS Campaigns,
+    CAST(fullVisitorId AS STRING) AS fullVisitorId,
+    visitID,
+    visitStartTime,
+  FROM
+    `bigquery-public-data.google_analytics_sample.ga_sessions_*`,
+    UNNEST(hits) AS hits
+  WHERE
+    _table_suffix BETWEEN '20170701'
+    AND '20170731' ),
+  conversions AS (
+  SELECT
+    CAST(fullVisitorId AS STRING) AS fullVisitorId,
+    MIN(visitStartTime) AS visitStartTime,
+  FROM
+    `bigquery-public-data.google_analytics_sample.ga_sessions_*`,
+    UNNEST(hits) AS hits
+  WHERE
+    _table_suffix BETWEEN '20170701'
+    AND '20170731'
+    AND hits.eCommerceAction.action_type = '6'
+  GROUP BY
+    1 )
+SELECT
+  Traffic.Sources,
+  Traffic.Medium,
+  Traffic.Channel,
+  date,
+  Traffic.Campaigns,
+  Traffic.fullVisitorId,
+  Traffic.visitID,
+  CASE
+    WHEN Traffic.visitStartTime < conversions.visitStartTime THEN 'Assisted'
+  ELSE
+  'Direct'
+END
+  AS ConversionType,
+  COUNT(DISTINCT Traffic.fullVisitorId) AS conversions
+FROM
+  Traffic
+INNER JOIN
+  conversions
+ON
+  Traffic.fullVisitorId = conversions.fullVisitorId
+  AND Traffic.visitStartTime <= conversions.visitStartTime
+GROUP BY
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8
+ORDER BY
+  date
